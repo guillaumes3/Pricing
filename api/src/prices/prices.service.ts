@@ -2,8 +2,15 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { GetPriceHistoryDto } from './get-price-history.dto';
+import { GetPriceStatsDto } from './get-price-stats.dto';
 import { PriceHistoryEntity } from './price-history.entity';
 import { PriceHistoryChartResponse } from './prices.types';
+
+interface PriceFilters {
+  startDate?: Date;
+  endDate?: Date;
+  competitorId?: number;
+}
 
 @Injectable()
 export class PricesRepository {
@@ -43,7 +50,7 @@ export class PricesRepository {
     return queryBuilder.orderBy('priceHistory.recordedAt', 'ASC').getMany();
   }
 
-  async getGlobalStats(filters: GetPriceHistoryDto): Promise<GlobalPriceStatsResponse['summary']> {
+  async getGlobalStats(filters: PriceFilters): Promise<GlobalPriceStatsResponse['summary']> {
     const queryBuilder = this.priceHistoryRepository
       .createQueryBuilder('priceHistory')
       .select('COUNT(priceHistory.id)', 'observationsCount')
@@ -145,24 +152,34 @@ export class PricesService {
     };
   }
 
-  async getGlobalPriceStats(filters: GetPriceHistoryDto): Promise<GlobalPriceStatsResponse> {
-    this.validateDateRange(filters);
+  async getGlobalPriceStats(filters: GetPriceStatsDto): Promise<GlobalPriceStatsResponse> {
+    const normalizedFilters = this.normalizeStatsFilters(filters);
 
-    const summary = await this.pricesRepository.getGlobalStats(filters);
+    this.validateDateRange(normalizedFilters);
+
+    const summary = await this.pricesRepository.getGlobalStats(normalizedFilters);
 
     return {
       filters: {
-        startDate: filters.startDate?.toISOString(),
-        endDate: filters.endDate?.toISOString(),
-        competitorId: filters.competitorId,
+        startDate: normalizedFilters.startDate?.toISOString(),
+        endDate: normalizedFilters.endDate?.toISOString(),
+        competitorId: normalizedFilters.competitorId,
       },
       summary,
     };
   }
 
-  private validateDateRange(filters: GetPriceHistoryDto): void {
+  private validateDateRange(filters: PriceFilters): void {
     if (filters.startDate && filters.endDate && filters.startDate > filters.endDate) {
       throw new BadRequestException('startDate must be less than or equal to endDate');
     }
+  }
+
+  private normalizeStatsFilters(filters: GetPriceStatsDto): PriceFilters {
+    return {
+      startDate: filters.startDate ? new Date(filters.startDate) : undefined,
+      endDate: filters.endDate ? new Date(filters.endDate) : undefined,
+      competitorId: filters.competitorId,
+    };
   }
 }

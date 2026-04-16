@@ -27,6 +27,7 @@ import {
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { verify } from 'jsonwebtoken';
 import { GetPriceHistoryDto } from './get-price-history.dto';
+import { GetPriceStatsDto } from './get-price-stats.dto';
 import { GlobalPriceStatsResponse, PricesService } from './prices.service';
 import { PriceHistoryChartResponse } from './prices.types';
 
@@ -91,7 +92,7 @@ export class PricesController {
   @ApiOkResponse({ description: 'Global statistics retrieved successfully' })
   @ApiBadRequestResponse({ description: 'Query parameters are invalid' })
   @ApiUnauthorizedResponse({ description: 'JWT is missing or invalid' })
-  getGlobalStats(@Query() query: GetPriceHistoryDto): Promise<GlobalPriceStatsResponse> {
+  getGlobalStats(@Query() query: GetPriceStatsDto): Promise<GlobalPriceStatsResponse> {
     return this.pricesService.getGlobalPriceStats(query);
   }
 

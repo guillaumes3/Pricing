@@ -1,6 +1,7 @@
 import random
 from typing import Iterable, Optional
 
+from fake_useragent import FakeUserAgentError, UserAgent
 from playwright_stealth import stealth_async
 from scrapy.exceptions import NotConfigured
 from twisted.internet import reactor
@@ -8,24 +9,41 @@ from twisted.internet.task import deferLater
 
 
 class RandomUserAgentMiddleware:
-    """Assign a random User-Agent to each request."""
+    """Rotate User-Agents dynamically with fake_useragent."""
 
-    def __init__(self, user_agents: Iterable[str]):
-        self.user_agents = [ua for ua in user_agents if ua]
-        if not self.user_agents:
-            raise NotConfigured("USER_AGENT_POOL is empty")
+    def __init__(self, fallback_user_agents: Iterable[str]):
+        self.fallback_user_agents = [ua for ua in fallback_user_agents if ua]
+        self.user_agent_provider = UserAgent()
 
     @classmethod
     def from_crawler(cls, crawler):
-        return cls(user_agents=crawler.settings.getlist("USER_AGENT_POOL"))
+        return cls(fallback_user_agents=crawler.settings.getlist("USER_AGENT_POOL"))
 
     def process_request(self, request, spider):
-        user_agent = random.choice(self.user_agents)
+        user_agent = self._get_dynamic_user_agent(spider)
         request.headers["User-Agent"] = user_agent
 
         if request.meta.get("playwright"):
             context_kwargs = request.meta.setdefault("playwright_context_kwargs", {})
-            context_kwargs.setdefault("user_agent", user_agent)
+            context_kwargs["user_agent"] = user_agent
+
+    def _get_dynamic_user_agent(self, spider) -> str:
+        try:
+            return self.user_agent_provider.random
+        except FakeUserAgentError as exc:
+            spider.logger.warning(
+                "fake_useragent unavailable, fallback pool used: %s", exc
+            )
+
+        if self.fallback_user_agents:
+            return random.choice(self.fallback_user_agents)
+
+        # Safe final fallback to keep crawl running if every provider fails.
+        return (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        )
 
 
 class PlaywrightStealthMiddleware:
