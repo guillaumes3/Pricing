@@ -33,6 +33,30 @@ Le script est tolérant:
 
 Si ton interface SQL affiche `extension "timescaledb" is not available`, ce n'est plus bloquant avec ce script.
 
+## Migration Supabase Postgres 17 (partitionnement natif)
+
+Pour un projet Supabase en Postgres 17.x, utilise la migration suivante (sans TimescaleDB):
+
+- `/Users/guillaumesergent/Desktop/pricing/api/sql/migrations/2026-04-16_supabase_pg17_price_history_partitioning.sql`
+
+Cette migration:
+
+- convertit `public.price_history` en table partitionnée mensuellement par `recorded_at`
+- garde les donnees existantes et cree une sauvegarde `public.price_history_legacy`
+- tente d'activer/configurer `pg_partman` si disponible (sinon continue en mode manuel)
+
+Execution:
+
+1. Ouvre l'editeur SQL Supabase.
+2. Colle le contenu du fichier de migration.
+3. Execute le script dans une fenetre de maintenance.
+
+Apres verification, tu peux supprimer la table de sauvegarde:
+
+```sql
+drop table if exists public.price_history_legacy;
+```
+
 ## Endpoint
 
 `GET /prices/:id/history`

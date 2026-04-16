@@ -1,5 +1,5 @@
-import { PriceDashboard } from "@/components/price-dashboard";
+import { ProductDashboard } from "@/components/product-dashboard";
 
 export default function Home() {
-  return <PriceDashboard />;
+  return <ProductDashboard />;
 }
