@@ -1,96 +1,136 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayMinSize,
+  ArrayUnique,
   IsArray,
-  IsInt,
-  IsNumber,
+  IsDefined,
+  IsNotEmpty,
+  IsOptional,
   IsString,
   IsUrl,
-  Max,
   MaxLength,
-  Min,
   ValidateNested,
 } from 'class-validator';
 
-export class CompetitorLinkInputDto {
+export class TrackProductLinkDto {
   @ApiProperty({
-    description: 'Unique competitor identifier.',
-    type: Number,
-    minimum: 1,
-    example: 3,
+    description: 'Nom du concurrent tel qu\'il existe dans la table competitors (ex: Amazon, Cdiscount).',
+    example: 'Amazon',
+    maxLength: 100,
   })
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  competitorId!: number;
+  @IsDefined()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  competitorName!: string;
 
   @ApiProperty({
-    description: 'Exact competitor product URL to monitor.',
-    type: String,
-    example: 'https://www.competitor.example/product/abc-123',
+    description: 'URL produit du concurrent à surveiller.',
+    example: 'https://www.amazon.fr/dp/B0C1234567',
+    maxLength: 2048,
   })
+  @IsDefined()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
+  @IsNotEmpty()
   @MaxLength(2048)
-  @IsUrl({ require_protocol: true })
+  @IsUrl({ require_protocol: true, protocols: ['http', 'https'] })
   url!: string;
 }
 
 export class TrackProductDto {
   @ApiProperty({
-    description: 'Product name shown in your catalog.',
-    type: String,
-    maxLength: 255,
+    description: 'Nom du produit à surveiller.',
     example: 'Apple AirPods Pro 2',
+    maxLength: 255,
   })
+  @IsDefined()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
+  @IsNotEmpty()
   @MaxLength(255)
   name!: string;
 
   @ApiProperty({
-    description: 'Internal or business SKU. Must be unique.',
-    type: String,
-    maxLength: 128,
+    description: 'SKU unique côté métier.',
     example: 'AIRPODS-PRO2-USB-C',
+    maxLength: 128,
   })
+  @IsDefined()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
+  @IsNotEmpty()
   @MaxLength(128)
   sku!: string;
 
   @ApiProperty({
-    description: 'Current product selling price in EUR.',
-    type: Number,
-    minimum: 0,
-    maximum: 9999999999.99,
-    example: 279.99,
+    description: 'Code EAN (optionnel).',
+    example: '0195949772495',
+    maxLength: 32,
+    required: false,
   })
-  @Type(() => Number)
-  @IsNumber({ allowInfinity: false, allowNaN: false, maxDecimalPlaces: 2 })
-  @Min(0)
-  @Max(9999999999.99)
-  price!: number;
+  @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(32)
+  ean?: string;
 
   @ApiProperty({
-    description: 'Competitor URLs linked to this product for tracking.',
-    type: [CompetitorLinkInputDto],
+    description: 'Marque du produit (optionnel).',
+    example: 'Apple',
+    maxLength: 120,
+    required: false,
+  })
+  @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(120)
+  brand?: string;
+
+  @ApiProperty({
+    description: 'Catégorie du produit (optionnel).',
+    example: 'Ecouteurs',
+    maxLength: 120,
+    required: false,
+  })
+  @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(120)
+  category?: string;
+
+  @ApiProperty({
+    description: 'URL canonique du produit (optionnel).',
+    example: 'https://www.apple.com/fr/airpods-pro/',
+    maxLength: 2048,
+    required: false,
+  })
+  @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(2048)
+  @IsUrl({ require_protocol: true, protocols: ['http', 'https'] })
+  canonicalUrl?: string;
+
+  @ApiProperty({
+    description: 'Liste des URL concurrentes à rattacher au produit.',
+    type: [TrackProductLinkDto],
     minItems: 1,
     maxItems: 100,
-    example: [
-      {
-        competitorId: 1,
-        url: 'https://www.amazon.fr/dp/B0C1234567',
-      },
-      {
-        competitorId: 2,
-        url: 'https://www.cdiscount.com/produit/airpods-pro-2.html',
-      },
-    ],
   })
+  @IsDefined()
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(100)
+  @ArrayUnique((link: TrackProductLinkDto) => link?.competitorName?.trim().toLowerCase())
   @ValidateNested({ each: true })
-  @Type(() => CompetitorLinkInputDto)
-  competitorLinks!: CompetitorLinkInputDto[];
+  @Type(() => TrackProductLinkDto)
+  links!: TrackProductLinkDto[];
 }

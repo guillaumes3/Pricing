@@ -4,7 +4,6 @@ import {
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiHeader,
-  ApiNotFoundResponse,
   ApiOperation,
   ApiTags,
   ApiUnauthorizedResponse,
@@ -19,22 +18,22 @@ import { ProductsService, TrackProductResponse } from './products.service';
 @ApiHeader({
   name: 'x-api-key',
   required: true,
-  description: 'API key used to authenticate scraper write operations.',
+  description: 'API key requise pour les opérations d\'écriture.',
 })
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Post('track')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({
-    summary: 'Create a product and attach exact competitor URLs to monitor',
+  @ApiOperation({ summary: 'Créer/synchroniser un produit et ses liens concurrents' })
+  @ApiCreatedResponse({ description: 'Produit suivi avec succès' })
+  @ApiBadRequestResponse({ description: 'Payload invalide' })
+  @ApiConflictResponse({
+    description:
+      'Conflit de contrainte en base (ex: domaine concurrent déjà utilisé par un autre nom).',
   })
-  @ApiCreatedResponse({ description: 'Product and competitor links created successfully' })
-  @ApiBadRequestResponse({ description: 'Payload validation failed or duplicate competitor ids were provided' })
-  @ApiUnauthorizedResponse({ description: 'Missing or invalid API key' })
-  @ApiConflictResponse({ description: 'SKU already exists or a duplicate link already exists' })
-  @ApiNotFoundResponse({ description: 'One or more competitor ids do not exist' })
-  trackProduct(@Body() payload: TrackProductDto): Promise<TrackProductResponse> {
+  @ApiUnauthorizedResponse({ description: 'Clé API manquante ou invalide' })
+  async trackProduct(@Body() payload: TrackProductDto): Promise<TrackProductResponse> {
     return this.productsService.trackProduct(payload);
   }
 }

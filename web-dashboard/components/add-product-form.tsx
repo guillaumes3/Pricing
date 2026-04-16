@@ -7,13 +7,19 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 const addProductSchema = z.object({
   productName: z.string().min(1, "Le nom du produit est requis."),
-  productUrl: z.string().url("Veuillez saisir une URL produit valide."),
+  productUrl: z
+    .string()
+    .url("Veuillez saisir une URL produit valide.")
+    .refine((url) => url.startsWith("http"), "L'URL doit commencer par http."),
   price: z.coerce.number().positive("Le prix doit etre un nombre positif."),
   competitors: z
     .array(
       z.object({
-        name: z.string().min(1, "Selectionnez un concurrent."),
-        url: z.string().url("Veuillez saisir une URL concurrent valide.")
+        name: z.string().min(1, "Le nom du concurrent est requis."),
+        url: z
+          .string()
+          .url("Veuillez saisir une URL concurrent valide.")
+          .refine((url) => url.startsWith("http"), "L'URL doit commencer par http.")
       })
     )
     .min(1, "Ajoutez au moins un concurrent.")
@@ -32,10 +38,11 @@ type ToastState = {
   message: string;
 };
 
-const defaultCompetitors = ["Amazon", "Cdiscount", "Fnac", "Boulanger", "Darty"];
+const defaultCompetitors = ["Amazon", "Cdiscount", "Fnac"];
 
 export function AddProductForm({ onSubmitData, competitorOptions }: AddProductFormProps) {
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [competitorNameInputs, setCompetitorNameInputs] = useState<Record<string, string>>({});
   const options = useMemo(() => competitorOptions ?? defaultCompetitors, [competitorOptions]);
 
   const {
@@ -83,6 +90,7 @@ export function AddProductForm({ onSubmitData, competitorOptions }: AddProductFo
         price: "",
         competitors: [{ name: "", url: "" }]
       });
+      setCompetitorNameInputs({});
 
       setToast({
         type: "success",
@@ -179,60 +187,82 @@ export function AddProductForm({ onSubmitData, competitorOptions }: AddProductFo
             </button>
           </div>
 
-          <div className="space-y-3">
-            {fields.map((field, index) => (
-              <div key={field.id} className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50/60 p-3 sm:grid-cols-[1fr_1.7fr_auto]">
-                <div className="space-y-1">
-                  <label htmlFor={`competitor-name-${index}`} className="text-xs font-medium text-slate-700">
-                    Concurrent
-                  </label>
-                  <select
-                    id={`competitor-name-${index}`}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-                    {...register(`competitors.${index}.name`)}
-                  >
-                    <option value="">Selectionner</option>
-                    {options.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.competitors?.[index]?.name ? (
-                    <p className="text-xs text-rose-600">{errors.competitors[index]?.name?.message}</p>
-                  ) : null}
-                </div>
-
-                <div className="space-y-1">
-                  <label htmlFor={`competitor-url-${index}`} className="text-xs font-medium text-slate-700">
-                    URL
-                  </label>
-                  <input
-                    id={`competitor-url-${index}`}
-                    type="url"
-                    placeholder="https://concurrent.com/produit"
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-                    {...register(`competitors.${index}.url`)}
-                  />
-                  {errors.competitors?.[index]?.url ? (
-                    <p className="text-xs text-rose-600">{errors.competitors[index]?.url?.message}</p>
-                  ) : null}
-                </div>
-
-                <div className="flex items-end">
-                  <button
-                    type="button"
-                    onClick={() => remove(index)}
-                    disabled={fields.length === 1}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Retirer
-                  </button>
-                </div>
-              </div>
+          <datalist id="competitor-options">
+            {options.map((option) => (
+              <option key={option} value={option} />
             ))}
-          </div>
+          </datalist>
 
+          <div className="space-y-3">
+            {fields.map((field, index) => {
+              const competitorNameRegistration = register(`competitors.${index}.name`);
+
+              return (
+                <div key={field.id} className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50/60 p-3 sm:grid-cols-[1fr_1.7fr_auto]">
+                  <div className="space-y-1">
+                    <label htmlFor={`competitor-name-${index}`} className="text-xs font-medium text-slate-700">
+                      Concurrent
+                    </label>
+                    <input
+                      id={`competitor-name-${index}`}
+                      type="text"
+                      list="competitor-options"
+                      placeholder="Amazon ou MaBoutiqueLocale"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                      name={competitorNameRegistration.name}
+                      ref={competitorNameRegistration.ref}
+                      onBlur={competitorNameRegistration.onBlur}
+                      onChange={(event) => {
+                        setCompetitorNameInputs((previous) => ({
+                          ...previous,
+                          [field.id]: event.target.value
+                        }));
+                        competitorNameRegistration.onChange(event);
+                      }}
+                      value={competitorNameInputs[field.id] ?? ""}
+                    />
+                    {errors.competitors?.[index]?.name ? (
+                      <p className="text-xs text-rose-600">{errors.competitors[index]?.name?.message}</p>
+                    ) : null}
+                  </div>
+
+                  <div className="space-y-1">
+                    <label htmlFor={`competitor-url-${index}`} className="text-xs font-medium text-slate-700">
+                      URL
+                    </label>
+                    <input
+                      id={`competitor-url-${index}`}
+                      type="url"
+                      placeholder="https://concurrent.com/produit"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                      {...register(`competitors.${index}.url`)}
+                    />
+                    {errors.competitors?.[index]?.url ? (
+                      <p className="text-xs text-rose-600">{errors.competitors[index]?.url?.message}</p>
+                    ) : null}
+                  </div>
+
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCompetitorNameInputs((previous) => {
+                          const next = { ...previous };
+                          delete next[field.id];
+                          return next;
+                        });
+                        remove(index);
+                      }}
+                      disabled={fields.length === 1}
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Retirer
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
           {errors.competitors && !Array.isArray(errors.competitors) ? (
             <p className="mt-3 text-xs text-rose-600">{errors.competitors.message}</p>
           ) : null}
