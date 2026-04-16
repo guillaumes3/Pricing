@@ -1,0 +1,11 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-vscode.vscode-typescript-next",
+    "dsznajder.es7-react-js-snippets",
+    "prisma.prisma",
+    "bradlc.vscode-tailwindcss",
+    "tamasfe.even-better-toml",
+    "mechatroner.rainbow-csv"
+  ]
+}

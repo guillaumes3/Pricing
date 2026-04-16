@@ -1,0 +1,17 @@
+# dependencies
+/node_modules
+/api/node_modules
+
+# build outputs
+/.next
+/out
+/api/dist
+
+# local env files
+.env
+.env.local
+.env.*.local
+/api/.env
+
+# misc
+.DS_Store
