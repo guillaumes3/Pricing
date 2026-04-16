@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --page-bg: #f4f7fb;
+  --card-bg: rgba(255, 255, 255, 0.92);
+  --card-border: rgba(255, 255, 255, 0.8);
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 15% 15%, rgba(26, 141, 255, 0.22) 0%, rgba(26, 141, 255, 0) 40%),
+    radial-gradient(circle at 90% 10%, rgba(14, 95, 176, 0.18) 0%, rgba(14, 95, 176, 0) 35%),
+    var(--page-bg);
+  color: #0e1117;
+}
